@@ -13,8 +13,6 @@ import re
 from .base_command import BaseCommand
 
 
-logger = logger('moderation')
-
 class ModerationCommands(BaseCommand):
     """Advanced moderation slash commands with comprehensive features."""
     
