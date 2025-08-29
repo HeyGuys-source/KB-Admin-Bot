@@ -10,7 +10,6 @@ from discord import app_commands
 from datetime import datetime, timezone, timedelta
 import asyncio
 import re
-import db
 from .base_command import BaseCommand
 
 
