@@ -10,9 +10,9 @@ from discord import app_commands
 from datetime import datetime, timezone, timedelta
 import asyncio
 import re
+import db
 from .base_command import BaseCommand
-from utils.logger import setup_logger
-from app import db
+
 
 logger = setup_logger('moderation')
 
