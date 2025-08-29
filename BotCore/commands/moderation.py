@@ -12,7 +12,6 @@ import asyncio
 import re
 from .base_command import BaseCommand
 
-
 class ModerationCommands(BaseCommand):
     """Advanced moderation slash commands with comprehensive features."""
     
@@ -45,47 +44,14 @@ class ModerationCommands(BaseCommand):
             
         return None
         
-    async def _log_command(self, interaction, command_name, target_user=None, reason=None, duration=None, success=True, error_message=None):
-        """Log command execution to database."""
-        try:
-            log_entry = CommandLog(
-                command_name=command_name,
-                user_id=str(interaction.user.id),
-                target_user_id=str(target_user.id) if target_user else None,
-                guild_id=str(interaction.guild.id) if interaction.guild else "0",
-                channel_id=str(interaction.channel.id) if interaction.channel else "0",
-                reason=reason,
-                duration=duration,
-                success=success,
-                error_message=error_message
-            )
-            db.session.add(log_entry)
-            
-            # Update stats
-            stats = BotStats.get_or_create()
-            stats.total_commands += 1
-            if command_name == 'ban':
-                stats.total_bans += 1
-            elif command_name == 'kick':
-                stats.total_kicks += 1
-            elif command_name == 'mute':
-                stats.total_mutes += 1
-            elif command_name == 'warn':
-                stats.total_warnings += 1
-                
-            db.session.commit()
-        except Exception as e:
-            logger.error(f"Error logging command: {e}")
-            db.session.rollback()
         
     async def _schedule_unban(self, guild, user, unban_time):
         """Schedule automatic unban."""
         await asyncio.sleep((unban_time - datetime.now(timezone.utc)).total_seconds())
         try:
             await guild.unban(user, reason="Automatic unban - ban duration expired")
-            logger.info(f"Automatically unbanned {user} from {guild}")
         except Exception as e:
-            logger.error(f"Error auto-unbanning {user}: {e}")
+            pass
 
     @app_commands.command(name="ban", description="Ban a user with optional reason and duration")
     @app_commands.describe(
@@ -134,15 +100,11 @@ class ModerationCommands(BaseCommand):
             if ban_until:
                 asyncio.create_task(self._schedule_unban(interaction.guild, member, ban_until))
                 
-            await self._log_command(interaction, "ban", member, reason, duration, True)
                 
         except discord.Forbidden:
             await self.send_embed(interaction, self.create_error_embed("Permission Error", "I don't have permission to ban this user."))
-            await self._log_command(interaction, "ban", member, reason, duration, False, "Bot permission denied")
         except Exception as e:
-            logger.error(f"Error in ban command: {e}")
             await self.send_embed(interaction, self.create_error_embed("Error", "An error occurred while banning the user."))
-            await self._log_command(interaction, "ban", member, reason, duration, False, str(e))
 
     @app_commands.command(name="unban", description="Unban a user by ID")
     @app_commands.describe(
@@ -165,17 +127,13 @@ class ModerationCommands(BaseCommand):
                 f"**User:** {user} ({user.id})\n**Reason:** {reason}\n**Moderator:** {interaction.user}"
             )
             await self.send_embed(interaction, embed)
-            await self._log_command(interaction, "unban", user, reason, None, True)
             
         except ValueError:
             await self.send_embed(interaction, self.create_error_embed("Error", "Invalid user ID format."))
         except discord.NotFound:
             await self.send_embed(interaction, self.create_error_embed("Error", "User not found or not banned."))
-            await self._log_command(interaction, "unban", None, reason, None, False, "User not found")
         except Exception as e:
-            logger.error(f"Error in unban command: {e}")
             await self.send_embed(interaction, self.create_error_embed("Error", "An error occurred while unbanning the user."))
-            await self._log_command(interaction, "unban", None, reason, None, False, str(e))
 
     @app_commands.command(name="kick", description="Kick a user with reason")
     @app_commands.describe(
@@ -207,15 +165,11 @@ class ModerationCommands(BaseCommand):
             )
             embed.set_thumbnail(url=member.display_avatar.url)
             await self.send_embed(interaction, embed)
-            await self._log_command(interaction, "kick", member, reason, None, True)
             
         except discord.Forbidden:
             await self.send_embed(interaction, self.create_error_embed("Permission Error", "I don't have permission to kick this user."))
-            await self._log_command(interaction, "kick", member, reason, None, False, "Bot permission denied")
         except Exception as e:
-            logger.error(f"Error in kick command: {e}")
             await self.send_embed(interaction, self.create_error_embed("Error", "An error occurred while kicking the user."))
-            await self._log_command(interaction, "kick", member, reason, None, False, str(e))
 
     @app_commands.command(name="mute", description="Mute a user for specified duration")
     @app_commands.describe(
@@ -252,12 +206,9 @@ class ModerationCommands(BaseCommand):
             )
             embed.set_thumbnail(url=member.display_avatar.url)
             await self.send_embed(interaction, embed)
-            await self._log_command(interaction, "mute", member, reason, duration, True)
             
         except Exception as e:
-            logger.error(f"Error in mute command: {e}")
             await self.send_embed(interaction, self.create_error_embed("Error", "An error occurred while muting the user."))
-            await self._log_command(interaction, "mute", member, reason, duration, False, str(e))
 
     @app_commands.command(name="unmute", description="Unmute a user")
     @app_commands.describe(
@@ -281,11 +232,9 @@ class ModerationCommands(BaseCommand):
                 f"**User:** {member} ({member.id})\n**Reason:** {reason}\n**Moderator:** {interaction.user}"
             )
             await self.send_embed(interaction, embed)
-            await self._log_command(interaction, "unmute", member, reason, None, True)
             
         except Exception as e:
             await self.send_embed(interaction, self.create_error_embed("Error", "An error occurred while unmuting the user."))
-            await self._log_command(interaction, "unmute", member, reason, None, False, str(e))
 
     @app_commands.command(name="warn", description="Warn a user and log the warning")
     @app_commands.describe(
@@ -315,11 +264,9 @@ class ModerationCommands(BaseCommand):
             )
             embed.set_thumbnail(url=member.display_avatar.url)
             await self.send_embed(interaction, embed)
-            await self._log_command(interaction, "warn", member, reason, None, True)
             
         except Exception as e:
             await self.send_embed(interaction, self.create_error_embed("Error", "An error occurred while warning the user."))
-            await self._log_command(interaction, "warn", member, reason, None, False, str(e))
 
     @app_commands.command(name="clear", description="Delete multiple messages")
     @app_commands.describe(
@@ -355,16 +302,10 @@ class ModerationCommands(BaseCommand):
                 embed.add_field(name="Filter", value=f"Only messages from {member}", inline=False)
                 
             await interaction.followup.send(embed=embed, delete_after=5)
-            await self._log_command(interaction, "clear", member, f"Cleared {len(deleted)} messages", str(amount), True)
             
-            # Update stats
-            stats = BotStats.get_or_create()
-            stats.total_messages_cleared += len(deleted)
-            db.session.commit()
             
         except Exception as e:
             await self.send_embed(interaction, self.create_error_embed("Error", "An error occurred while clearing messages."))
-            await self._log_command(interaction, "clear", member, None, str(amount), False, str(e))
 
     @app_commands.command(name="slowmode", description="Set channel slowmode delay")
     @app_commands.describe(delay="Slowmode delay in seconds (0 to disable)")
@@ -383,11 +324,9 @@ class ModerationCommands(BaseCommand):
                 embed = self.create_success_embed("Slowmode Set", f"Slowmode set to **{delay} seconds** in {interaction.channel.mention}")
                 
             await self.send_embed(interaction, embed)
-            await self._log_command(interaction, "slowmode", None, f"Set to {delay} seconds", str(delay), True)
             
         except Exception as e:
             await self.send_embed(interaction, self.create_error_embed("Error", "An error occurred while setting slowmode."))
-            await self._log_command(interaction, "slowmode", None, None, str(delay), False, str(e))
 
 async def setup(bot):
     """Setup function for the cog."""
