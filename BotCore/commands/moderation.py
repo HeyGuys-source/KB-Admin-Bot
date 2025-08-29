@@ -12,7 +12,6 @@ import asyncio
 import re
 from .base_command import BaseCommand
 from utils.logger import setup_logger
-from models import CommandLog, BotStats
 from app import db
 
 logger = setup_logger('moderation')
