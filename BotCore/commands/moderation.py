@@ -19,6 +19,25 @@ class ModerationCommands(BaseCommand):
         super().__init__(bot)
         self.muted_users = {}  # Store muted users with expiration times
         
+    async def send_embed(self, interaction, embed):
+        """Send an embed response for slash commands."""
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send(embed=embed)
+            else:
+                await interaction.response.send_message(embed=embed)
+            return True
+        except discord.HTTPException:
+            try:
+                content = f"**{embed.title}**\n{embed.description or ''}"
+                if interaction.response.is_done():
+                    await interaction.followup.send(content)
+                else:
+                    await interaction.response.send_message(content)
+                return True
+            except discord.HTTPException:
+                return False
+        
     def _parse_duration(self, duration_str):
         """Parse duration string like '1h', '30m', '7d' into datetime."""
         if not duration_str:
