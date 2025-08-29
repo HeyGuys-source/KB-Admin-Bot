@@ -86,6 +86,9 @@ class AdvancedDiscordBot:
             # Set initial status
             await self.update_bot_status()
             
+            # Load all command modules
+            await self.load_commands()
+            
         @self.bot.event
         async def on_guild_join(guild):
             """Called when bot joins a guild."""
@@ -248,3 +251,31 @@ class AdvancedDiscordBot:
             
         except Exception as e:
             logger.error(f"Error during bot shutdown: {e}")
+            
+    async def load_commands(self):
+        """Load all command modules."""
+        try:
+            # Load moderation commands
+            from commands.moderation import ModerationCommands
+            await self.bot.add_cog(ModerationCommands(self.bot))
+            logger.info("Loaded moderation commands")
+            
+            # Load echo command
+            from commands.echo_command import EchoCommand
+            await self.bot.add_cog(EchoCommand(self.bot))
+            logger.info("Loaded echo commands")
+            
+            # Load reaction reporting
+            from commands.reaction_reporting import ReactionReporting
+            await self.bot.add_cog(ReactionReporting(self.bot))
+            logger.info("Loaded reaction reporting system")
+            
+            # Load base example commands
+            from commands.base_command import ExampleCommand
+            await self.bot.add_cog(ExampleCommand(self.bot))
+            logger.info("Loaded example commands")
+            
+            logger.info("All command modules loaded successfully!")
+            
+        except Exception as e:
+            logger.error(f"Error loading commands: {e}")
